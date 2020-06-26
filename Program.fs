@@ -7,6 +7,7 @@ open Saturn.Router
 open Giraffe.ResponseWriters
 open Giraffe.Core
 open Microsoft.AspNetCore.Http
+open Feliz.ViewEngine
 
 let browser =
     pipeline {
@@ -14,30 +15,35 @@ let browser =
         set_header "x-pipeline-type" "Browser"
     }
 
+let private fullHtml layout =
+    htmlString (layout |> Render.htmlDocument)
+
+let private partialHtml (layout: ReactElement) = htmlString (layout |> Render.htmlView)
+
 let defaultView =
     router {
-        get "/" (htmlView Index.layout)
+        get "/" (fullHtml Index.layout)
         get "/index.html" (redirectTo false "/")
         get "/default.html" (redirectTo false "/")
     }
 
 let timeHandler next context =
-    htmlView (DynamicView.timeLayout (System.DateTime.Now.ToString())) next context
+    partialHtml (DynamicView.timeLayout (System.DateTime.Now.ToString())) next context
 
 let dynamicViewHandler next context =
-    htmlView (DynamicView.layout (System.DateTime.Now.ToString())) next context
+    fullHtml (DynamicView.layout (System.DateTime.Now.ToString())) next context
 
 let nameHandler next (context: HttpContext) =
     let name = context.TryGetQueryStringValue "name"
 
-    htmlView (DynamicView.greetingLayout name) next context
+    partialHtml (DynamicView.greetingLayout name) next context
 
 let browserRouter =
     router {
         pipe_through browser
 
         forward "" defaultView
-        get "/otherView" (htmlView OtherView.layout)
+        get "/otherView" (fullHtml OtherView.layout)
         get "/dynamicView" dynamicViewHandler
         get "/time" timeHandler
         get "/name" nameHandler

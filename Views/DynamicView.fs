@@ -1,56 +1,62 @@
 module DynamicView
 
-open Giraffe.GiraffeViewEngine
+open Feliz.ViewEngine
 
 let timeLayout time =
-    div [] [ str (sprintf "Current Time is: %s" time) ]
+    Html.div (sprintf "Current Time is: %s" time)
 
 let private fromClient time =
-    div []
-        [ p [] [ str "Client" ]
-          timeLayout time ]
+    Html.div [ prop.children [ Html.p "Client"; timeLayout time ] ]
 
 let private fromServer time =
-    div []
-        [ p [] [ str "Server" ]
-          div
-              [ attr "hx-get" "/time"
-                attr "hx-trigger" "every 1s" ] [ timeLayout time ] ]
+    Html.div
+        [ prop.children
+            [ Html.p "Server"
+              Html.div
+                  [ prop.custom ("hx-get", "/time")
+                    prop.custom ("hx-trigger", "every 1s")
+                    prop.children [ timeLayout time ] ] ] ]
 
 let private form =
-    form
-        [ _class "w-full max-w-sm"
-          attr "hx-get" "/name"
-          attr "hx-target" "#greeting" ]
-        [ div [ _class "flex items-center border-b border-b-2 border-purple-500 py-2" ]
-              [ input
-                  [ _name "name"
-                    _placeholder "Enter your name"
-                    _class
-                        "appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none" ]
-                button
-                    [ _class
-                        "flex-shrink-0 bg-purple-500 hover:bg-purple-700 border-purple-500 hover:border-purple-700 text-sm border-4 text-white py-1 px-2 rounded"
-                      _type "submit" ] [ str "Submit" ] ] ]
+    Html.form
+        [ prop.className "w-full max-w-sm"
+          prop.custom ("hx-get", "/name")
+          prop.custom ("hx-target", "#greeting")
+          prop.children
+              [ Html.div
+                  [ prop.className "flex items-center border-b border-b-2 border-purple-500 py-2"
+                    prop.children
+                        [ Html.input
+                            [ prop.name "name"
+                              prop.placeholder "Enter your name"
+                              prop.className
+                                  "appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none" ]
+                          Html.button
+                              [ prop.className
+                                  "flex-shrink-0 bg-purple-500 hover:bg-purple-700 border-purple-500 hover:border-purple-700 text-sm border-4 text-white py-1 px-2 rounded"
+                                prop.type' "submit"
+                                prop.text "Submit" ] ] ] ] ]
 
 let greetingLayout name =
     match name with
     | Some name ->
         match System.String.IsNullOrEmpty(name) with
-        | true -> div [] []
-        | false -> Helpers.contentBox (p [] [ str (sprintf "Hello, %s" name) ])
-    | None -> div [] []
+        | true -> Html.none
+        | false -> Helpers.contentBox (Html.p (sprintf "Hello, %s" name))
+    | None -> Html.none
 
-let private greeting = div [ _id "greeting" ] []
+let private greeting = Html.div [ prop.id "greeting" ]
 
 let private dynamicView time =
     [ Helpers.contentBox
-        (a
-            [ _class "pt-2 pb-2 pl-4 pr-3 rounded-sm bg-blue-600 text-white"
-              _href "/" ] [ str "Back to Main" ])
+        (Html.a
+            [ prop.className "pt-2 pb-2 pl-4 pr-3 rounded-sm bg-blue-600 text-white"
+              prop.href "/"
+              prop.text "Back to Main" ])
       Helpers.contentBox (fromClient time)
       Helpers.contentBox (fromServer time)
       Helpers.contentBox form
       greeting ]
 
-let layout time = App.layout (dynamicView time)
+let layout time =
+    App.layout (Html.div [ prop.children (dynamicView time) ])

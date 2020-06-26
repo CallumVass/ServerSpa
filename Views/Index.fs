@@ -1,17 +1,21 @@
 module Index
 
-open Giraffe.GiraffeViewEngine
+open Feliz.ViewEngine
 
 
 let links =
-    div [ _class "flex flex-row" ]
-        [ a
-            [ _class "mr-2 pt-2 pb-2 pl-4 pr-3 rounded-sm bg-blue-600 text-white"
-              _href "/otherView" ] [ str "Other View" ]
-          a
-              [ _class "mr-2 pt-2 pb-2 pl-4 pr-3 rounded-sm bg-blue-600 text-white"
-                _href "/dynamicView" ] [ str "Dynamic View" ] ]
+    Html.div
+        [ prop.className "flex flex-row"
+          prop.children
+              [ Html.a
+                  [ prop.className "mr-2 pt-2 pb-2 pl-4 pr-3 rounded-sm bg-blue-600 text-white"
+                    prop.href "/otherView"
+                    prop.text "Other View" ]
+                Html.a
+                    [ prop.className "mr-2 pt-2 pb-2 pl-4 pr-3 rounded-sm bg-blue-600 text-white"
+                      prop.href "/dynamicView"
+                      prop.text "Dynamic View" ] ] ]
 
-let index = [ Helpers.contentBox links ]
+let index = Helpers.contentBox links
 
-let layout = App.layout index
+let layout = (App.layout index)
