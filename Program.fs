@@ -6,47 +6,75 @@ open Saturn.PipelineHelpers
 open Saturn.Router
 open Giraffe.ResponseWriters
 open Giraffe.Core
+open Giraffe.ModelBinding
 open Microsoft.AspNetCore.Http
 open Feliz.ViewEngine
+open FSharp.Control.Tasks.V2.ContextInsensitive
+open Model
+
+let setTurbolinksLocationHeader: HttpHandler =
+    let isTurbolink (ctx: HttpContext) =
+        ctx.Request.Headers.ContainsKey "Turbolinks-Referrer"
+
+    fun next ctx ->
+        task {
+            if isTurbolink ctx
+            then ctx.SetHttpHeader "Turbolinks-Location" (ctx.Request.Path + ctx.Request.QueryString)
+            return! next ctx
+        }
 
 let browser =
     pipeline {
         plug putSecureBrowserHeaders
         set_header "x-pipeline-type" "Browser"
+        plug setTurbolinksLocationHeader
     }
 
-let private fullHtml layout =
-    htmlString (layout |> Render.htmlDocument)
+let private htmx (layout: ReactElement) next (context: HttpContext) =
 
-let private partialHtml (layout: ReactElement) = htmlString (layout |> Render.htmlView)
+    let isHtmx =
+        context.Request.Headers.ContainsKey("HX-Request")
+
+    if isHtmx
+    then htmlString (layout |> Render.htmlView) next context
+    else htmlString (layout |> Render.htmlDocument) next context
 
 let defaultView =
     router {
-        get "/" (fullHtml Index.layout)
+        get "/" (htmx Index.layout)
         get "/index.html" (redirectTo false "/")
         get "/default.html" (redirectTo false "/")
     }
 
 let timeHandler next context =
-    partialHtml (DynamicView.timeLayout (System.DateTime.Now.ToString())) next context
+    context
+    |> htmx (DynamicView.timeLayout (System.DateTime.Now.ToString())) next
 
 let dynamicViewHandler next context =
-    fullHtml (DynamicView.layout (System.DateTime.Now.ToString())) next context
+    htmx (DynamicView.layout (System.DateTime.Now.ToString())) next context
 
 let nameHandler next (context: HttpContext) =
     let name = context.TryGetQueryStringValue "name"
 
-    partialHtml (DynamicView.greetingLayout name) next context
+    htmx (DynamicView.greetingLayout name) next context
+
+let modelHandler next (context: HttpContext) =
+    task {
+        let! model = context.BindFormAsync<PostModel>()
+        return! htmx (DynamicView.modelLayout model) next context
+    }
+
 
 let browserRouter =
     router {
         pipe_through browser
 
         forward "" defaultView
-        get "/otherView" (fullHtml OtherView.layout)
+        get "/otherView" (htmx OtherView.layout)
         get "/dynamicView" dynamicViewHandler
         get "/time" timeHandler
         get "/name" nameHandler
+        post "/model" modelHandler
     }
 
 
