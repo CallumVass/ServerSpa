@@ -9,7 +9,7 @@ open Giraffe.Core
 open Giraffe.ModelBinding
 open Microsoft.AspNetCore.Http
 open Feliz.ViewEngine
-open FSharp.Control.Tasks.V2.ContextInsensitive
+open FSharp.Control.Tasks
 open Model
 
 let setTurbolinksLocationHeader: HttpHandler =
@@ -20,6 +20,7 @@ let setTurbolinksLocationHeader: HttpHandler =
         task {
             if isTurbolink ctx
             then ctx.SetHttpHeader "Turbolinks-Location" (ctx.Request.Path + ctx.Request.QueryString)
+
             return! next ctx
         }
 
